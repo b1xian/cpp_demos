@@ -69,6 +69,31 @@ int InitMutex(const std::string& key_name, pthread_mutex_t **mutex) {
     return 0;
 }
 
+int InitRwLock(const std::string& key_name, pthread_rwlock_t **rwlock) {
+    int mutex_fd = shm_open(key_name.c_str(), O_CREAT | O_RDWR, S_IRUSR | S_IWUSR);
+    if (mutex_fd == -1) {
+        perror("shm_open error");
+        return mutex_fd;
+    }
+    int res = ftruncate(mutex_fd, sizeof(pthread_mutex_t));
+    if (res == -1) {
+        perror("ftruncate error");
+        return res;
+    }
+    // 映射pthread_mutex_t的共享内存
+    *rwlock = (pthread_rwlock_t*)mmap(NULL, sizeof(pthread_rwlock_t), PROT_READ | PROT_WRITE, MAP_SHARED, mutex_fd, 0);
+    // 初始化具有跨进程能力的互斥锁
+    pthread_rwlockattr_t rwlock_attr;
+    pthread_rwlockattr_init(&rwlock_attr);
+    pthread_rwlockattr_setpshared(&rwlock_attr, PTHREAD_PROCESS_SHARED);
+    pthread_rwlock_init(*rwlock, &rwlock_attr);
+    if (*rwlock == nullptr) {
+        perror("init rwlock failed!!!");
+        return -1;
+    }
+    return 0;
+}
+
 int InitShmMem(const std::string& key_name, int proj_id, void** shm_addr, size_t size, int& shmId) {
     /**********实现步骤中的第1步**********/
     //利用ftok获得一个IPC键值，

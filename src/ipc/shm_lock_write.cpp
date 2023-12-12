@@ -36,13 +36,21 @@ int main() {
     //}
 
     // 创建mutex
-    pthread_mutex_t *mutex;
-    int res = InitMutex(mutex_key_name, &mutex);
+    //pthread_mutex_t *mutex;
+    //int res = InitMutex(mutex_key_name, &mutex);
+    //if (res == -1) {
+    //    return res;
+    //}
+    //printf("mutex: %p\n", mutex);
+    //printf("-- init mutex success\n");
+
+    pthread_rwlock_t *rwlock;
+    int res = InitRwLock(mutex_key_name, &rwlock);
     if (res == -1) {
         return res;
     }
-    printf("mutex: %p\n", mutex);
-    printf("-- init mutex success\n");
+    printf("rwlock: %p\n", rwlock);
+    printf("-- init rwlock success\n");
 
     void *shm_addr;
     size_t total_size = img_data_size + sizeof(uint64_t) + sizeof(int);
@@ -58,6 +66,9 @@ int main() {
     size_t i = 0;
     int camera_mask = 15;
     while(loop) {
+        if (i >= img_list.size()) {
+            break;
+        }
         printf("read img : %s\n", img_list[i].c_str());
         mat = cv::imread(img_list[i]);
         size_t startPos = img_list[i].find_last_of('/') + 1;
@@ -66,14 +77,16 @@ int main() {
         uint64_t time = atol(timestamp.c_str());
         auto start = std::chrono::system_clock::now();
 
-        pthread_mutex_lock(mutex);
+        //pthread_mutex_lock(mutex);
+        pthread_rwlock_wrlock(rwlock);
         std::memcpy(shm_addr, &camera_mask, sizeof(camera_mask));
         std::memcpy((char*)shm_addr + sizeof(camera_mask), &time, sizeof(time));
         char* frame_data = (char*)shm_addr + sizeof(camera_mask) + sizeof(time);
         std::memcpy(frame_data, mat.data, img_data_size);
         auto end = std::chrono::system_clock::now();
         // 写操作结束后释放互斥锁
-        pthread_mutex_unlock(mutex);
+        //pthread_mutex_unlock(mutex);
+        pthread_rwlock_unlock(rwlock);
 
         double time_cost = std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count() * 1e-6;
         printf("Writing %d time cost : %f ms\n", i, time_cost);
@@ -85,10 +98,12 @@ int main() {
     }
 
     printf("Writing is finish ! clear memory\n");
-    pthread_mutex_lock(mutex);
+    //pthread_mutex_lock(mutex);
+    pthread_rwlock_wrlock(rwlock);
     memset(shm_addr, 0, total_size);
     // 写操作结束后释放互斥锁
-    pthread_mutex_unlock(mutex);
+    //pthread_mutex_unlock(mutex);
+    pthread_rwlock_unlock(rwlock);
 
 
     //断开

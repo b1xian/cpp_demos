@@ -26,14 +26,30 @@ int main() {
     char* read_data = new char [img_data_size + sizeof(uint64_t) + sizeof(int)];
     printf("img_data_size : %ld\n", img_data_size);
 
+    //// 创建mutex
+    //pthread_mutex_t *mutex;
+    //int res = InitMutex(mutex_key_name, &mutex);
+    //if (res == -1) {
+    //    return res;
+    //}
+    //printf("mutex: %p\n", mutex);
+    //printf("-- init mutex success\n");
     // 创建mutex
-    pthread_mutex_t *mutex;
-    int res = InitMutex(mutex_key_name, &mutex);
+    //pthread_mutex_t *mutex;
+    //int res = InitMutex(mutex_key_name, &mutex);
+    //if (res == -1) {
+    //    return res;
+    //}
+    //printf("mutex: %p\n", mutex);
+    //printf("-- init mutex success\n");
+
+    pthread_rwlock_t *rwlock;
+    int res = InitRwLock(mutex_key_name, &rwlock);
     if (res == -1) {
         return res;
     }
-    printf("mutex: %p\n", mutex);
-    printf("-- init mutex success\n");
+    printf("rwlock: %p\n", rwlock);
+    printf("-- init rwlock success\n");
 
     void *shm_addr;
     size_t total_size = img_data_size + sizeof(uint64_t) + sizeof(int);
@@ -50,7 +66,8 @@ int main() {
     uint64_t last_time = 0;
     while (loop) {
         auto start = std::chrono::system_clock::now();
-        pthread_mutex_lock(mutex);
+        //pthread_mutex_lock(mutex);
+        pthread_rwlock_rdlock(rwlock);
         // 读取相机掩码
         std::memcpy(&read_camera_mask, shm_addr, sizeof(camera_mask));
         //printf("read camera mask : %d\n", read_camera_mask);
@@ -58,20 +75,23 @@ int main() {
         std::memcpy(&time, (char*)shm_addr + sizeof(camera_mask), sizeof(time));
         if (read_camera_mask != camera_mask) {
             printf("no camera data, waiting!!!\n");
-            pthread_mutex_unlock(mutex);
+            //pthread_mutex_unlock(mutex);
+            pthread_rwlock_unlock(rwlock);
             // 休眠，模拟写操作的时间间隔
             std::this_thread::sleep_for(std::chrono::milliseconds(50));
             continue;
         }
         if (last_time != 0 && time <= last_time) {
             printf("frame not update, continue\n");
-            pthread_mutex_unlock(mutex);
+            //pthread_mutex_unlock(mutex);
+            pthread_rwlock_unlock(rwlock);
             // 休眠，模拟写操作的时间间隔
             std::this_thread::sleep_for(std::chrono::milliseconds(1));
             continue;
         }
         std::memcpy(read_data, shm_addr, total_size);
-        pthread_mutex_unlock(mutex);
+        //pthread_mutex_unlock(mutex);
+        pthread_rwlock_unlock(rwlock);
         auto end = std::chrono::system_clock::now();
         double time_cost = std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count() * 1e-6;
         cv::Mat read_mat = cv::Mat(mat.rows, mat.cols, CV_8UC3, read_data + sizeof(read_camera_mask) + sizeof(time));
