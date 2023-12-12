@@ -1,0 +1,14 @@
+object_sdk_a5_context_path: ../sdk/visdeta5p3d/yml/context.yml
+lane_sdk_context_path: ../sdk/pinet/yml/context.yml
+lc_sdk_context_path: ../sdk/lcnet/yml/context.yml
+show_id: [0,1,2]
+
+# 相机的尺度，ipm后bev的尺度，以及内参和畸变参数相关配置文件
+camera_config_name       : CameraConfig.yml
+# 与ipm变换相关的外参相关配置文件
+ipm_config_name          : IpmConfig.txt
+
+front_img_width          : 1280
+front_img_height         : 720
+bev_img_width            : 1000
+bev_img_height           : 1000

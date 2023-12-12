@@ -1,0 +1,30 @@
+project(test_ipc)
+
+set(CMAKE_BUILD_TYPE Release)
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g -Wall")
+
+set(CMAKE_CXX_STANDARD 17)
+
+find_package(OpenCV REQUIRED)
+include_directories(${OpenCV_INCLUDE_DIRS})
+include_directories(./)
+
+
+add_executable(test_ipc_write shm_write.cpp)
+add_executable(test_ipc_read shm_read.cpp)
+add_executable(test_lock_write lock_write.cpp)
+add_executable(test_lock_read lock_read.cpp)
+add_executable(test_mmap_write mmap_write.cpp)
+add_executable(test_mmap_read mmap_read.cpp)
+add_executable(test_lock_shm_write shm_lock_write.cpp)
+add_executable(test_lock_shm_read shm_lock_read.cpp)
+add_executable(test_lock_shm_read2 shm_lock_read2.cpp)
+target_link_libraries(test_ipc_write pthread ${OpenCV_LIBRARIES})
+target_link_libraries(test_ipc_read pthread ${OpenCV_LIBRARIES})
+target_link_libraries(test_mmap_write pthread ${OpenCV_LIBRARIES} rt)
+target_link_libraries(test_mmap_read pthread ${OpenCV_LIBRARIES} rt)
+target_link_libraries(test_lock_write pthread ${OpenCV_LIBRARIES} rt)
+target_link_libraries(test_lock_read pthread ${OpenCV_LIBRARIES} rt)
+target_link_libraries(test_lock_shm_write pthread ${OpenCV_LIBRARIES} rt)
+target_link_libraries(test_lock_shm_read pthread ${OpenCV_LIBRARIES} rt)
+target_link_libraries(test_lock_shm_read2 pthread ${OpenCV_LIBRARIES} rt)

@@ -1,0 +1,36 @@
+# 相机的话题名，用于进行相机的开关控制，程序部署前需要进行统一设置
+camera_f30_name  : /test
+camera_f60_name  : /dev/video1_0/compressed
+camera_f120_name : /test
+camera_l60_name  : /dev/video0_2/compressed
+camera_l120_name : /test
+camera_r60_name  : /dev/video0_3/compressed
+camera_r120_name : /test
+
+# 本工程控制的相机名称
+controlled_camera : camera_f60_name  #=========左侧相机
+#controlled_camera : camera_r60_name #=========右侧相机
+
+# 本程序接收的话题名
+TopicCamera : camera_f60_name  #=======左侧相机
+#TopicCamera : camera_r60_name  #=======右侧相机
+
+# compressed: 0; normal: 1
+isCompressedImageType: false
+
+# 后向车道线消息
+TopicBackLane: /perception/lidar_lanes
+
+# 后向curb消息
+
+# pnc换道消息
+TopicSiwtchStatus: /pnc_msgs/switch_status
+
+# imu消息
+TopicIMU: /IMUData
+
+# 能够激活的换道消息
+nodeActivatedSwitchType: 1
+# nodeActivatedSwitchType: 2
+# 主动触发相机，v1.0.2以前为false，v1.0.2为true
+active_trigger  : true

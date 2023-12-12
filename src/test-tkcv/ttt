@@ -1,0 +1,156 @@
+#include <opencv2/core/version.hpp>
+#include <opencv2/imgproc/imgproc.hpp>
+#if CV_MAJOR_VERSION >= 3
+#    include <opencv2/imgcodecs.hpp>
+#else
+#    include <opencv2/highgui/highgui.hpp>
+#endif
+
+#include <vpi/OpenCVInterop.hpp>
+
+#include <vpi/Image.h>
+#include <vpi/Status.h>
+#include <vpi/Stream.h>
+#include <vpi/algo/ConvertImageFormat.h>
+#include <vpi/algo/Convolution.h>
+
+#include <cstring> // for memset
+#include <iostream>
+#include <sstream>
+
+#define CHECK_STATUS(STMT)                                    \
+     do                                                        \
+     {                                                         \
+         VPIStatus status = (STMT);                            \
+         if (status != VPI_SUCCESS)                            \
+         {                                                     \
+             char buffer[VPI_MAX_STATUS_MESSAGE_LENGTH];       \
+             vpiGetLastStatusMessage(buffer, sizeof(buffer));  \
+             std::ostringstream ss;                            \
+             ss << vpiStatusGetName(status) << ": " << buffer; \
+             throw std::runtime_error(ss.str());               \
+         }                                                     \
+     } while (0);
+
+int main(int argc, char *argv[])
+{
+    // OpenCV image that will be wrapped by a VPIImage.
+    // Define it here so that it's destroyed *after* wrapper is destroyed
+    cv::Mat cvImage;
+
+    // VPI objects that will be used
+    VPIImage image    = NULL;
+    VPIImage imageBGR = NULL;
+    VPIImage gradient = NULL;
+    VPIStream stream  = NULL;
+
+    int retval = 0;
+
+    try
+    {
+        if (argc != 3)
+        {
+            throw std::runtime_error(std::string("Usage: ") + argv[0] + " <cpu|pva|cuda> <input image>");
+        }
+
+        std::string strBackend       = argv[1];
+        std::string strInputFileName = argv[2];
+
+        // Load the input image
+        cvImage = cv::imread(strInputFileName);
+        if (cvImage.empty())
+        {
+            throw std::runtime_error("Can't open '" + strInputFileName + "'");
+        }
+
+        // We can't use cv::IMREAD_GRAYSCALE when opening the input file because the
+        // color to grayscale conversion used differs between OpenCV-2.4 and OpenCV>=3.0,
+        // yielding different image content.
+
+        // Now parse the backend
+        VPIBackend backend;
+
+        if (strBackend == "cpu")
+        {
+            backend = VPI_BACKEND_CPU;
+        }
+        else if (strBackend == "cuda")
+        {
+            backend = VPI_BACKEND_CUDA;
+        }
+        else if (strBackend == "pva")
+        {
+            backend = VPI_BACKEND_PVA;
+        }
+        else
+        {
+            throw std::runtime_error("Backend '" + strBackend +
+                                     "' not recognized, it must be either cpu, cuda or pva.");
+        }
+
+        // Create the stream for any backend.
+        CHECK_STATUS(vpiStreamCreate(0, &stream));
+
+        // We now wrap the loaded image into a VPIImage object to be used by VPI.
+        CHECK_STATUS(vpiImageCreateWrapperOpenCVMat(cvImage, 0, &imageBGR));
+
+        // Now create the input image as a single unsigned 8-bit channel
+        CHECK_STATUS(vpiImageCreate(cvImage.cols, cvImage.rows, VPI_IMAGE_FORMAT_U8, 0, &image));
+
+        // Convert the loaded image to grayscale
+        CHECK_STATUS(vpiSubmitConvertImageFormat(stream, VPI_BACKEND_CUDA, imageBGR, image, NULL));
+
+        // Now create the output image, single unsigned 8-bit channel.
+        CHECK_STATUS(vpiImageCreate(cvImage.cols, cvImage.rows, VPI_IMAGE_FORMAT_U8, 0, &gradient));
+
+        // Define the convolution filter, a simple edge detector.
+        float kernel[3 * 3] = {1, 0, -1, 0, 0, 0, -1, 0, 1};
+
+        // Submit it for processing passing the input image the result image that will store the gradient.
+        CHECK_STATUS(vpiSubmitConvolution(stream, backend, image, gradient, kernel, 3, 3, VPI_BORDER_ZERO));
+
+        // Wait until the algorithm finishes processing
+        CHECK_STATUS(vpiStreamSync(stream));
+
+        // Now let's retrieve the output image contents and output it to disk
+        {
+            // Lock output image to retrieve its data.
+            VPIImageData outData;
+            CHECK_STATUS(vpiImageLockData(gradient, VPI_LOCK_READ, VPI_IMAGE_BUFFER_HOST_PITCH_LINEAR, &outData));
+
+            // Returned data consists of host-accessible memory buffers in pitch-linear layout.
+            assert(outData.bufferType == VPI_IMAGE_BUFFER_HOST_PITCH_LINEAR);
+
+            const VPIImageBufferPitchLinear &outPitch = outData.buffer.pitch;
+
+            cv::Mat cvOut(outPitch.planes[0].height, outPitch.planes[0].width, CV_8UC1, outPitch.planes[0].data,
+                          outPitch.planes[0].pitchBytes);
+            imwrite("edges_" + strBackend + ".png", cvOut);
+
+            // Done handling output image, don't forget to unlock it.
+            CHECK_STATUS(vpiImageUnlock(gradient));
+        }
+    }
+    catch (std::exception &e)
+    {
+        std::cerr << e.what() << std::endl;
+        retval = 1;
+    }
+
+    // Clean up
+
+    // Make sure stream is synchronized before destroying the objects
+    // that might still be in use.
+    if (stream != NULL)
+    {
+        vpiStreamSync(stream);
+    }
+
+    vpiImageDestroy(image);
+    vpiImageDestroy(imageBGR);
+    vpiImageDestroy(gradient);
+
+    vpiStreamDestroy(stream);
+
+    return retval;
+}

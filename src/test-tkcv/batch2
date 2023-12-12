@@ -1,0 +1,584 @@
+#include "remap_neon.h"
+
+#include <math.h>
+
+#include "../common/macro.h"
+
+//#if defined (USE_NEON) and __ARM_NEON
+//#include "arm_neon.h"
+
+namespace va_cv {
+
+void RemapNeon::remap_neon_inter_linear_one_channel(const uint8_t* src, int w_in, int h_in,
+                                                    uint8_t* dst, int w_out, int h_out,
+                                                    const cv::Mat& map_xy) {
+    //const int remap_coef_bits = 11;
+    //const int remap_coef_scale = 1 << remap_coef_bits;
+    //
+    //double scale_x = static_cast<double>(w_in) / w_out;
+    //double scale_y = static_cast<double>(h_in) / h_out;
+    //
+    //int* buf = new int[w_out * 2 + h_out * 2];
+    //
+    //int* xofs = buf;          // new int[w];
+    //int* yofs = buf + w_out;  // new int[h];
+    //
+    //int16_t* ialpha =
+    //        reinterpret_cast<int16_t*>(buf + w_out + h_out);  // new short[w * 2];
+    //int16_t* ibeta =
+    //        reinterpret_cast<int16_t*>(buf + w_out * 2 + h_out);  // new short[h * 2];
+    //
+    //float fx = 0.f;
+    //float fy = 0.f;
+    //int sx = 0;
+    //int sy = 0;
+    //
+    //for (int dx = 0; dx < w_out; dx++) {
+    //    fx = static_cast<float>((dx + 0.5) * scale_x - 0.5);
+    //    sx = floor(fx);
+    //    fx -= sx;
+    //
+    //    if (sx < 0) {
+    //        sx = 0;
+    //        fx = 0.f;
+    //    }
+    //    if (sx >= w_in - 1) {
+    //        sx = w_in - 2;
+    //        fx = 1.f;
+    //    }
+    //
+    //    xofs[dx] = sx;
+    //
+    //    float a0 = (1.f - fx) * remap_coef_scale;
+    //    float a1 = fx * remap_coef_scale;
+    //
+    //    ialpha[dx * 2] = SATURATE_CAST_SHORT(a0);
+    //    ialpha[dx * 2 + 1] = SATURATE_CAST_SHORT(a1);
+    //}
+    //for (int dy = 0; dy < h_out; dy++) {
+    //    fy = static_cast<float>((dy + 0.5) * scale_y - 0.5);
+    //    sy = floor(fy);
+    //    fy -= sy;
+    //
+    //    if (sy < 0) {
+    //        sy = 0;
+    //        fy = 0.f;
+    //    }
+    //    if (sy >= h_in - 1) {
+    //        sy = h_in - 2;
+    //        fy = 1.f;
+    //    }
+    //
+    //    yofs[dy] = sy;
+    //
+    //    float b0 = (1.f - fy) * remap_coef_scale;
+    //    float b1 = fy * remap_coef_scale;
+    //
+    //    ibeta[dy * 2] = SATURATE_CAST_SHORT(b0);
+    //    ibeta[dy * 2 + 1] = SATURATE_CAST_SHORT(b1);
+    //}
+    //// loop body
+    //int16_t* rowsbuf0 = new int16_t[w_out + 1];
+    //int16_t* rowsbuf1 = new int16_t[w_out + 1];
+    //int16_t* rows0 = rowsbuf0;
+    //int16_t* rows1 = rowsbuf1;
+    //
+    //int prev_sy1 = -1;
+    //for (int dy = 0; dy < h_out; dy++) {
+    //    int sy = yofs[dy];
+    //
+    //    if (sy == prev_sy1) {
+    //        // hremap one row
+    //        int16_t* rows0_old = rows0;
+    //        rows0 = rows1;
+    //        rows1 = rows0_old;
+    //        const uint8_t* S1 = src + w_in * (sy + 1);
+    //        const int16_t* ialphap = ialpha;
+    //        int16_t* rows1p = rows1;
+    //        for (int dx = 0; dx < w_out; dx++) {
+    //            int sx = xofs[dx];
+    //            int16_t a0 = ialphap[0];
+    //            int16_t a1 = ialphap[1];
+    //
+    //            const uint8_t* S1p = S1 + sx;
+    //            rows1p[dx] = (S1p[0] * a0 + S1p[1] * a1) >> 4;
+    //
+    //            ialphap += 2;
+    //        }
+    //    } else {
+    //        // hremap two rows
+    //        const uint8_t* S0 = src + w_in * (sy);
+    //        const uint8_t* S1 = src + w_in * (sy + 1);
+    //
+    //        const int16_t* ialphap = ialpha;
+    //        int16_t* rows0p = rows0;
+    //        int16_t* rows1p = rows1;
+    //        for (int dx = 0; dx < w_out; dx++) {
+    //            int sx = xofs[dx];
+    //            int16_t a0 = ialphap[0];
+    //            int16_t a1 = ialphap[1];
+    //
+    //            const uint8_t* S0p = S0 + sx;
+    //            const uint8_t* S1p = S1 + sx;
+    //            rows0p[dx] = (S0p[0] * a0 + S0p[1] * a1) >> 4;
+    //            rows1p[dx] = (S1p[0] * a0 + S1p[1] * a1) >> 4;
+    //
+    //            ialphap += 2;
+    //        }
+    //    }
+    //
+    //    prev_sy1 = sy + 1;
+    //
+    //    // vremap
+    //    int16_t b0 = ibeta[0];
+    //    int16_t b1 = ibeta[1];
+    //
+    //    int16_t* rows0p = rows0;
+    //    int16_t* rows1p = rows1;
+    //    uint8_t* dp_ptr = dst + w_out * (dy);
+    //
+    //    int cnt = w_out >> 3;
+    //    int remain = w_out - (cnt << 3);
+    //    int16x4_t _b0 = vdup_n_s16(b0);
+    //    int16x4_t _b1 = vdup_n_s16(b1);
+    //    int32x4_t _v2 = vdupq_n_s32(2);
+    //
+    //    for (cnt = w_out >> 3; cnt > 0; cnt--) {
+    //        int16x4_t _rows0p_sr4 = vld1_s16(rows0p);
+    //        int16x4_t _rows1p_sr4 = vld1_s16(rows1p);
+    //        int16x4_t _rows0p_1_sr4 = vld1_s16(rows0p + 4);
+    //        int16x4_t _rows1p_1_sr4 = vld1_s16(rows1p + 4);
+    //
+    //        int32x4_t _rows0p_sr4_mb0 = vmull_s16(_rows0p_sr4, _b0);
+    //        int32x4_t _rows1p_sr4_mb1 = vmull_s16(_rows1p_sr4, _b1);
+    //        int32x4_t _rows0p_1_sr4_mb0 = vmull_s16(_rows0p_1_sr4, _b0);
+    //        int32x4_t _rows1p_1_sr4_mb1 = vmull_s16(_rows1p_1_sr4, _b1);
+    //
+    //        int32x4_t _acc = _v2;
+    //        _acc = vsraq_n_s32(_acc, _rows0p_sr4_mb0, 16);
+    //        _acc = vsraq_n_s32(_acc, _rows1p_sr4_mb1, 16);
+    //
+    //        int32x4_t _acc_1 = _v2;
+    //        _acc_1 = vsraq_n_s32(_acc_1, _rows0p_1_sr4_mb0, 16);
+    //        _acc_1 = vsraq_n_s32(_acc_1, _rows1p_1_sr4_mb1, 16);
+    //
+    //        int16x4_t _acc16 = vshrn_n_s32(_acc, 2);
+    //        int16x4_t _acc16_1 = vshrn_n_s32(_acc_1, 2);
+    //
+    //        uint8x8_t cb_dout = vqmovun_s16(vcombine_s16(_acc16, _acc16_1));
+    //
+    //        vst1_u8(dp_ptr, cb_dout);
+    //
+    //        dp_ptr += 8;
+    //        rows0p += 8;
+    //        rows1p += 8;
+    //    }
+    //    for (; remain; --remain) {
+    //        // D[x] = (rows0[x]*b0 + rows1[x]*b1) >> INTER_RESIZE_COEF_BITS;
+    //        *dp_ptr++ =
+    //                (uint8_t)(((int16_t)((b0 * (int16_t)(*rows0p++)) >> 16) +
+    //                           (int16_t)((b1 * (int16_t)(*rows1p++)) >> 16) + 2) >>
+    //                                                                             2);
+    //    }
+    //    ibeta += 2;
+    //}
+    //
+    //delete[] buf;
+    //delete[] rowsbuf0;
+    //delete[] rowsbuf1;
+}
+
+
+void RemapNeon::remap_neon_inter_linear_three_channel(const uint8_t* src,
+                                                    int w_in,
+                                                    int h_in,
+                                                    uint8_t* dst,
+                                                    int w_out,
+                                                    int h_out,
+                                                    const cv::Mat& map_x,
+                                                    const cv::Mat& map_y) {
+    int c = 3;
+    int w_stride = c * w_out;
+    const int resize_coef_bits = 11;
+    const int resize_coef_scale = 1 << resize_coef_bits;
+
+    // 1. 设置sx fx sy fy
+    printf("~~~~~~~~~~~~~~~~~~set map param continue~~~~~~~\n");
+    //每一个map点需要保存的参数：[sy(32) fy(16) 1-fy(16) sx(32) fx(16) 1-fx(16)]
+    //int total_point = map_x.cols * map_x.rows;
+    //int *buf = new int[total_point * 4];
+    //int *sy_buf = buf;
+    //short *fy_buf = reinterpret_cast<short *>(sy_buf + total_point);
+    //short *fy_1_buf = reinterpret_cast<short *>(fy_buf + total_point);
+    //int *sx_buf = buf + total_point * 2;
+    //short *fx_buf = reinterpret_cast<short *>(sx_buf + total_point);
+    //short *fx_1_buf = reinterpret_cast<short *>(fx_buf + total_point);
+    //
+    //float fx = 0.f;
+    //float fy = 0.f;
+    //int sx = 0;
+    //int sy = 0;
+    //int count_flag = 0;
+    //for (int i = 0; i < map_x.rows; ++i) {
+    //    for (int j = 0; j < map_x.cols; ++j) {
+    //
+    //        cv::Point2f src_loc = map_x.at<cv::Point2f>(i, j);
+    //        fx = src_loc.x;
+    //        fy = src_loc.y;
+    //
+    //        // y coord
+    //        sy = floor(fy);
+    //        fy -= sy;
+    //        if (sy < 0) {
+    //            sy = 0;
+    //            fy = 0.f;
+    //        }
+    //        if (sy >= h_in - 1) {
+    //            sy = h_in - 2;
+    //            fy = 1.f;
+    //        }
+    //        sy_buf[count_flag] = sy;
+    //        fy_1_buf[count_flag] = SATURATE_CAST_SHORT((1.f - fy) * resize_coef_scale);
+    //        fy_buf[count_flag] = SATURATE_CAST_SHORT(resize_coef_scale - fy_1_buf[count_flag]);
+    //        //std::cout << 1.f - fy << ", " <<  (1.f - fy) * resize_coef_scale << ", "
+    //        //        << fy_1_buf[count_flag] << ", " << fy_buf[count_flag] << std::endl;
+    //
+    //        // x coord
+    //        sx = floor(fx);
+    //        fx -= sx;
+    //        if (sx < 0) {
+    //            sx = 0;
+    //            fx = 0.f;
+    //        }
+    //        if (sx >= w_in - 1) {
+    //            sx = w_in - 2;
+    //            fx = 1.f;
+    //        }
+    //
+    //        sx_buf[count_flag] = sx;
+    //        fx_1_buf[count_flag] = SATURATE_CAST_SHORT((1.f - fx) * resize_coef_scale);
+    //        fx_buf[count_flag] = SATURATE_CAST_SHORT(resize_coef_scale - fx_1_buf[count_flag]);
+    //
+    //        count_flag++;
+    //    }
+    //}
+    // 验证第一步的设置正确
+    //count_flag = 0;
+    //for (int dy = 0; dy < h_out; dy++) {
+    //    for (int dx = 0; dx < w_out; dx++) {
+    //        sy = sy_buf[count_flag];
+    //        short fy_1 = fy_1_buf[count_flag];
+    //        short fy = fy_buf[count_flag];
+    //
+    //        sx = sx_buf[count_flag];
+    //        short fx_1 = fx_1_buf[count_flag];
+    //        short fx = fx_buf[count_flag];
+    //
+    //        int lt_ofs = sy * w_in * c + sx * c;
+    //        int rt_ofs = sy * w_in * c + (sx + 1) * c;
+    //        int lb_ofs = (sy + 1) * w_in * c + sx * c;
+    //        int rb_ofs = (sy + 1) * w_in * c + (sx + 1) * c;
+    //        int dst_ofs = (dy * w_out + dx) * c;
+    //
+    //        auto x0y0 = fx_1 * fy_1;
+    //        auto x0y1 = fx_1 * fy;
+    //        auto x1y0 = fx * fy_1;
+    //        auto x1y1 = fx * fy;
+    //
+    //        for (int k = 0; k < 3; k++) {
+    //            *(dst + dst_ofs + k) =
+    //                    (*(src + lt_ofs + k) * x0y0 +
+    //                     *(src + lb_ofs + k) * x0y1 +
+    //                     *(src + rt_ofs + k) * x1y0 +
+    //                     *(src + rb_ofs + k) * x1y1) >> 22;
+    //        }
+    //
+    //        count_flag += 1;
+    //    }
+    //}
+
+    // loop body
+    int count_flag = 0;
+    float *map_x_data = (float*)map_x.data;
+    float *map_y_data = (float*)map_y.data;
+    float32x4_t _loc_y;
+    int32x4_t _loc_sy;
+    float32x4_t _loc_fy;
+    int16x4_t _loc_fy_a;
+    int16x4_t _loc_fy_b;
+
+    float32x4_t _one_float = vdupq_n_f32(1.f);
+    int32x4_t _one_int = vdupq_n_s32(1);
+    int32x4_t _zero_int = vdupq_n_s32(0);
+    int32x4_t _h_in_int = vdupq_n_s32(h_in - 1);
+    int32x4_t _w_in_int = vdupq_n_s32(w_in - 1);
+    int16x4_t _coef_short = vdup_n_s16(static_cast<short>(resize_coef_scale));
+    float32x4_t _loc_x;
+    int32x4_t _loc_sx;
+    float32x4_t _loc_fx;
+    int16x4_t _loc_fx_a;
+    int16x4_t _loc_fx_b;
+
+    int32x4_t left_top_ofs_b;
+    int32x4_t left_top_ofs_g;
+    int32x4_t left_top_ofs_r;
+    int single_step = 4;
+    for (int dy = 0; dy < h_out; dy++) {
+        int map_data_y_ofs = dy * w_out;
+        int dst_data_y_ofs = dy * w_stride;
+        for (int dx = 0; dx < w_out; dx+=8) { // 每次处理8个元素,分两轮计算
+            int dst_data_ofs =  dst_data_y_ofs + dx * 3;
+
+            int16x4_t cb_dst_s16_0;
+            int16x4_t cg_dst_s16_0;
+            int16x4_t cr_dst_s16_0;
+            int16x4_t cb_dst_s16_1;
+            int16x4_t cg_dst_s16_1;
+            int16x4_t cr_dst_s16_1;
+            for (int i = 0; i < 2; ++i) {
+                //  ************************round 1********************************
+                int map_data_ofs =  map_data_y_ofs + dx + single_step * i;
+
+                _loc_x = vld1q_f32(map_x_data + map_data_ofs);
+                _loc_sx = vcvtq_s32_f32(_loc_x);
+                _loc_fx = vsubq_f32(_loc_x, vcvtq_f32_s32(_loc_sx));
+                // todo 处理当sx越界的情况
+                //printf("sx %d %d %d %d \n", _loc_sx[0], _loc_sx[1], _loc_sx[2], _loc_sx[3]);
+                //uint32x4_t sx_less_zero = vcltq_s32(_loc_sx, _zero_int);
+                //printf("sx ob %d %d %d %d \n", sx_less_zero[0], sx_less_zero[1], sx_less_zero[2], sx_less_zero[3]);
+                //uint32x4_t sx_ob = vcgeq_s32(_loc_sx, _w_in_int);
+                //printf("sx ob %d %d %d %d \n", sx_ob[0], sx_ob[1], sx_ob[2], sx_ob[3]);
+
+                //printf("%f %d %f \n", _loc_x[0], _loc_sx[0], _loc_fx[0]);
+                _loc_fx = vmulq_n_f32(vsubq_f32(_one_float, _loc_fx), resize_coef_scale);
+                // float转为short
+                _loc_fx_a = vmovn_s32(vcvtq_s32_f32(_loc_fx));
+                _loc_fx_b = vsub_s16(_coef_short, _loc_fx_a);
+                //printf("%f, %d - %d = %d\n", _loc_fx[0], _coef_short[0], _loc_fx_a[0], _loc_fx_b[0]);
+
+                _loc_y = vld1q_f32(map_y_data + map_data_ofs);
+                _loc_sy = vcvtq_s32_f32(_loc_y);
+                _loc_fy = vsubq_f32(_loc_y, vcvtq_f32_s32(_loc_sy));
+                // todo 处理当sy越界的情况
+                //printf("sy %d %d %d %d \n", _loc_sy[0], _loc_sy[1], _loc_sy[2], _loc_sy[3]);
+                //uint32x4_t sy_less_zero = vcltq_s32(_loc_sy, _zero_int);
+                //printf("sy ob %d %d %d %d \n", sy_less_zero[0], sy_less_zero[1],
+                //       sy_less_zero[2], sy_less_zero[3]);
+                //uint32x4_t sy_ob = vcgeq_s32(_loc_sy, _h_in_int);
+                //printf("sy ob %d %d %d %d \n", sy_ob[0], sy_ob[1], sy_ob[2], sy_ob[3]);
+                //printf("%f %d %f \n", _loc_y[0], _loc_sy[0], _loc_fy[0]);
+
+                _loc_fy = vmulq_n_f32(vsubq_f32(_one_float, _loc_fy), resize_coef_scale);
+                // float转为short
+                _loc_fy_a = vmovn_s32(vcvtq_s32_f32(_loc_fy));
+                _loc_fy_b = vsub_s16(_coef_short, _loc_fy_a);
+                //printf("%f, %d - %d = %d\n", _loc_fy[0], _coef_short[0], _loc_fy_a[0], _loc_fy_b[0]);
+
+
+                // 计算坐标
+                // left top
+                //int lt_ofs = sy * w_in * c + sx * c;
+                // sy * w_in * c
+                int32x4_t h0_ofs = vmulq_n_s32(_loc_sy, w_stride);
+                // (sy + 1) * w_in * c
+                int32x4_t h1_ofs = vmulq_n_s32(vaddq_s32(_loc_sy, _one_int), w_stride);
+                // sx * c
+                int32x4_t w0_ofs = vmulq_n_s32(_loc_sx, c);
+                // (sx + 1) * c
+                int32x4_t w1_ofs = vmulq_n_s32(vaddq_s32(_loc_sx, _one_int), c);
+
+                int32x4_t lt_ofs = vaddq_s32(h0_ofs, w0_ofs);
+                int32x4_t rt_ofs = vaddq_s32(h0_ofs, w1_ofs);
+                int32x4_t lb_ofs = vaddq_s32(h1_ofs, w0_ofs);
+                int32x4_t rb_ofs = vaddq_s32(h1_ofs, w1_ofs);
+                //printf("lt row %d %d %d %d \n", _loc_sy[0], _loc_sy[1], _loc_sy[2], _loc_sy[3]);
+                //printf("lt idx %d %d %d %d \n", lt_ofs[0], lt_ofs[1], lt_ofs[2], lt_ofs[3]);
+
+                int32x4_t x0y0 = vmull_s16(_loc_fx_a, _loc_fy_a);
+                int32x4_t x0y1 = vmull_s16(_loc_fx_a, _loc_fy_b);
+                int32x4_t x1y0 = vmull_s16(_loc_fx_b, _loc_fy_a);
+                int32x4_t x1y1 = vmull_s16(_loc_fx_b, _loc_fy_b);
+                //printf("x0y0 %d %d %d %d \n", x0y0[0], x0y0[1], x0y0[2], x0y0[3]);
+
+                // -----------------------------cb_--------------------
+                // 取出四个元素在lt的点
+                int32x4_t cb_lt_src;
+                cb_lt_src = vsetq_lane_s32(static_cast<int32_t>(src[lt_ofs[0]]), cb_lt_src, 0);
+                cb_lt_src = vsetq_lane_s32(static_cast<int32_t>(src[lt_ofs[1]]), cb_lt_src, 1);
+                cb_lt_src = vsetq_lane_s32(static_cast<int32_t>(src[lt_ofs[2]]), cb_lt_src, 2);
+                cb_lt_src = vsetq_lane_s32(static_cast<int32_t>(src[lt_ofs[3]]), cb_lt_src, 3);
+                //printf("lt value %d %d %d %d \n", cb_lt_src[0], cb_lt_src[1], cb_lt_src[2], cb_lt_src[3]);
+
+                // 取出四个元素在rt的点
+                int32x4_t cb_rt_src;
+                cb_rt_src = vsetq_lane_s32(static_cast<int32_t>(src[rt_ofs[0]]), cb_rt_src, 0);
+                cb_rt_src = vsetq_lane_s32(static_cast<int32_t>(src[rt_ofs[1]]), cb_rt_src, 1);
+                cb_rt_src = vsetq_lane_s32(static_cast<int32_t>(src[rt_ofs[2]]), cb_rt_src, 2);
+                cb_rt_src = vsetq_lane_s32(static_cast<int32_t>(src[rt_ofs[3]]), cb_rt_src, 3);
+                //printf("rt value %d %d %d %d \n", cb_rt_src[0], cb_rt_src[1], cb_rt_src[2], cb_rt_src[3]);
+
+                // 取出四个元素在lb的点
+                int32x4_t cb_lb_src;
+                cb_lb_src = vsetq_lane_s32(static_cast<int32_t>(src[lb_ofs[0]]), cb_lb_src, 0);
+                cb_lb_src = vsetq_lane_s32(static_cast<int32_t>(src[lb_ofs[1]]), cb_lb_src, 1);
+                cb_lb_src = vsetq_lane_s32(static_cast<int32_t>(src[lb_ofs[2]]), cb_lb_src, 2);
+                cb_lb_src = vsetq_lane_s32(static_cast<int32_t>(src[lb_ofs[3]]), cb_lb_src, 3);
+                //printf("lb value %d %d %d %d \n", cb_lb_src[0], cb_lb_src[1], cb_lb_src[2], cb_lb_src[3]);
+
+                // 取出四个元素在rb的点
+                int32x4_t cb_rb_src;
+                cb_rb_src = vsetq_lane_s32(static_cast<int32_t>(src[rb_ofs[0]]), cb_rb_src, 0);
+                cb_rb_src = vsetq_lane_s32(static_cast<int32_t>(src[rb_ofs[1]]), cb_rb_src, 1);
+                cb_rb_src = vsetq_lane_s32(static_cast<int32_t>(src[rb_ofs[2]]), cb_rb_src, 2);
+                cb_rb_src = vsetq_lane_s32(static_cast<int32_t>(src[rb_ofs[3]]), cb_rb_src, 3);
+                //printf("rb value %d %d %d %d \n", cb_rb_src[0], cb_rb_src[1], cb_rb_src[2], cb_rb_src[3]);
+
+                // 长指令l mul
+                int32x4_t cb_lt_dst = vmulq_s32(cb_lt_src, x0y0);
+                //printf("cb_lt_dst value %d %d %d %d \n", cb_lt_dst[0], cb_lt_dst[1], cb_lt_dst[2], cb_lt_dst[3]);
+                int32x4_t cb_lb_dst = vmulq_s32(cb_lb_src, x0y1);
+                int32x4_t cb_rt_dst = vmulq_s32(cb_rt_src, x1y0);
+                int32x4_t cb_rb_dst = vmulq_s32(cb_rb_src, x1y1);
+
+                int32x4_t cb_final_dst = vaddq_s32(cb_lt_dst, cb_lb_dst);
+                cb_final_dst = vaddq_s32(cb_final_dst, cb_rt_dst);
+                cb_final_dst = vaddq_s32(cb_final_dst, cb_rb_dst);
+                //printf("final value %d %d %d %d \n", cb_final_dst[0], cb_final_dst[1], cb_final_dst[2], cb_final_dst[3]);
+                int32x4_t cb_dst_s32 = vshrq_n_s32(cb_final_dst, 22);
+                if (i == 0) {
+                    cb_dst_s16_0 = vmovn_s32(cb_dst_s32);
+                } else if (i == 1) {
+                    cb_dst_s16_1 = vmovn_s32(cb_dst_s32);
+                }
+                //uint8x8_t cb_dout = vqmovun_s16(vcombine_s16(cb_dst_s16, cb_dst_s16));
+                //printf("cb_dst_s16 value %d %d %d %d \n", cb_dst_s16[0], cb_dst_s16[1], cb_dst_s16[2], cb_dst_s16[3]);
+                //printf("cb_dout value %d %d %d %d \n", cb_dout[0], cb_dout[1], cb_dout[2], cb_dout[3]);
+
+                // -----------------------------cg_--------------------
+                // 取出四个元素在lt的点
+                int32x4_t cg_lt_src;
+                cg_lt_src = vsetq_lane_s32(static_cast<int32_t>(src[lt_ofs[0] + 1]), cg_lt_src, 0);
+                cg_lt_src = vsetq_lane_s32(static_cast<int32_t>(src[lt_ofs[1] + 1]), cg_lt_src, 1);
+                cg_lt_src = vsetq_lane_s32(static_cast<int32_t>(src[lt_ofs[2] + 1]), cg_lt_src, 2);
+                cg_lt_src = vsetq_lane_s32(static_cast<int32_t>(src[lt_ofs[3] + 1]), cg_lt_src, 3);
+                //printf("lt value %d %d %d %d \n", cg_lt_src[0], cg_lt_src[1], cg_lt_src[2], cg_lt_src[3]);
+
+                // 取出四个元素在rt的点
+                int32x4_t cg_rt_src;
+                cg_rt_src = vsetq_lane_s32(static_cast<int32_t>(src[rt_ofs[0] + 1]), cg_rt_src, 0);
+                cg_rt_src = vsetq_lane_s32(static_cast<int32_t>(src[rt_ofs[1] + 1]), cg_rt_src, 1);
+                cg_rt_src = vsetq_lane_s32(static_cast<int32_t>(src[rt_ofs[2] + 1]), cg_rt_src, 2);
+                cg_rt_src = vsetq_lane_s32(static_cast<int32_t>(src[rt_ofs[3] + 1]), cg_rt_src, 3);
+                //printf("rt value %d %d %d %d \n", cg_rt_src[0], cg_rt_src[1], cg_rt_src[2], cg_rt_src[3]);
+
+                // 取出四个元素在lb的点
+                int32x4_t cg_lb_src;
+                cg_lb_src = vsetq_lane_s32(static_cast<int32_t>(src[lb_ofs[0] + 1]), cg_lb_src, 0);
+                cg_lb_src = vsetq_lane_s32(static_cast<int32_t>(src[lb_ofs[1] + 1]), cg_lb_src, 1);
+                cg_lb_src = vsetq_lane_s32(static_cast<int32_t>(src[lb_ofs[2] + 1]), cg_lb_src, 2);
+                cg_lb_src = vsetq_lane_s32(static_cast<int32_t>(src[lb_ofs[3] + 1]), cg_lb_src, 3);
+                //printf("lb value %d %d %d %d \n", cg_lb_src[0], cg_lb_src[1], cg_lb_src[2], cg_lb_src[3]);
+
+                // 取出四个元素在rb的点
+                int32x4_t cg_rb_src;
+                cg_rb_src = vsetq_lane_s32(static_cast<int32_t>(src[rb_ofs[0] + 1]), cg_rb_src, 0);
+                cg_rb_src = vsetq_lane_s32(static_cast<int32_t>(src[rb_ofs[1] + 1]), cg_rb_src, 1);
+                cg_rb_src = vsetq_lane_s32(static_cast<int32_t>(src[rb_ofs[2] + 1]), cg_rb_src, 2);
+                cg_rb_src = vsetq_lane_s32(static_cast<int32_t>(src[rb_ofs[3] + 1]), cg_rb_src, 3);
+                //printf("rb value %d %d %d %d \n", cg_rb_src[0], cg_rb_src[1], cg_rb_src[2], cg_rb_src[3]);
+
+                // 长指令l mul
+                int32x4_t cg_lt_dst = vmulq_s32(cg_lt_src, x0y0);
+                //printf("cg_lt_dst value %d %d %d %d \n", cg_lt_dst[0], cg_lt_dst[1], cg_lt_dst[2], cg_lt_dst[3]);
+                int32x4_t cg_lb_dst = vmulq_s32(cg_lb_src, x0y1);
+                int32x4_t cg_rt_dst = vmulq_s32(cg_rt_src, x1y0);
+                int32x4_t cg_rb_dst = vmulq_s32(cg_rb_src, x1y1);
+
+                int32x4_t cg_final_dst = vaddq_s32(cg_lt_dst, cg_lb_dst);
+                cg_final_dst = vaddq_s32(cg_final_dst, cg_rt_dst);
+                cg_final_dst = vaddq_s32(cg_final_dst, cg_rb_dst);
+                //printf("final value %d %d %d %d \n", cg_final_dst[0], cg_final_dst[1], cg_final_dst[2], cg_final_dst[3]);
+                int32x4_t cg_dst_s32 = vshrq_n_s32(cg_final_dst, 22);
+                if (i == 0) {
+                    cg_dst_s16_0 = vmovn_s32(cg_dst_s32);
+                } else if (i == 1) {
+                    cg_dst_s16_1 = vmovn_s32(cg_dst_s32);
+                }
+                //uint8x8_t cg_dout = vqmovun_s16(vcombine_s16(cg_dst_s16, cg_dst_s16));
+                //printf("cg_dst_s16 value %d %d %d %d \n", cg_dst_s16[0], cg_dst_s16[1], cg_dst_s16[2], cg_dst_s16[3]);
+                //printf("cg_dout value %d %d %d %d \n", cg_dout[0], cg_dout[1], cg_dout[2], cg_dout[3]);
+
+                // -----------------------------cr_--------------------
+                // 取出四个元素在lt的点
+                int32x4_t cr_lt_src;
+                cr_lt_src = vsetq_lane_s32(static_cast<int32_t>(src[lt_ofs[0] + 2]), cr_lt_src, 0);
+                cr_lt_src = vsetq_lane_s32(static_cast<int32_t>(src[lt_ofs[1] + 2]), cr_lt_src, 1);
+                cr_lt_src = vsetq_lane_s32(static_cast<int32_t>(src[lt_ofs[2] + 2]), cr_lt_src, 2);
+                cr_lt_src = vsetq_lane_s32(static_cast<int32_t>(src[lt_ofs[3] + 2]), cr_lt_src, 3);
+                //printf("lt value %d %d %d %d \n", cr_lt_src[0], cr_lt_src[1], cr_lt_src[2], cr_lt_src[3]);
+
+                // 取出四个元素在rt的点
+                int32x4_t cr_rt_src;
+                cr_rt_src = vsetq_lane_s32(static_cast<int32_t>(src[rt_ofs[0] + 2]), cr_rt_src, 0);
+                cr_rt_src = vsetq_lane_s32(static_cast<int32_t>(src[rt_ofs[1] + 2]), cr_rt_src, 1);
+                cr_rt_src = vsetq_lane_s32(static_cast<int32_t>(src[rt_ofs[2] + 2]), cr_rt_src, 2);
+                cr_rt_src = vsetq_lane_s32(static_cast<int32_t>(src[rt_ofs[3] + 2]), cr_rt_src, 3);
+                //printf("rt value %d %d %d %d \n", cr_rt_src[0], cr_rt_src[1], cr_rt_src[2], cr_rt_src[3]);
+
+                // 取出四个元素在lb的点
+                int32x4_t cr_lb_src;
+                cr_lb_src = vsetq_lane_s32(static_cast<int32_t>(src[lb_ofs[0] + 2]), cr_lb_src, 0);
+                cr_lb_src = vsetq_lane_s32(static_cast<int32_t>(src[lb_ofs[1] + 2]), cr_lb_src, 1);
+                cr_lb_src = vsetq_lane_s32(static_cast<int32_t>(src[lb_ofs[2] + 2]), cr_lb_src, 2);
+                cr_lb_src = vsetq_lane_s32(static_cast<int32_t>(src[lb_ofs[3] + 2]), cr_lb_src, 3);
+                //printf("lb value %d %d %d %d \n", cr_lb_src[0], cr_lb_src[1], cr_lb_src[2], cr_lb_src[3]);
+
+                // 取出四个元素在rb的点
+                int32x4_t cr_rb_src;
+                cr_rb_src = vsetq_lane_s32(static_cast<int32_t>(src[rb_ofs[0] + 2]), cr_rb_src, 0);
+                cr_rb_src = vsetq_lane_s32(static_cast<int32_t>(src[rb_ofs[1] + 2]), cr_rb_src, 1);
+                cr_rb_src = vsetq_lane_s32(static_cast<int32_t>(src[rb_ofs[2] + 2]), cr_rb_src, 2);
+                cr_rb_src = vsetq_lane_s32(static_cast<int32_t>(src[rb_ofs[3] + 2]), cr_rb_src, 3);
+                //printf("rb value %d %d %d %d \n", cr_rb_src[0], cr_rb_src[1], cr_rb_src[2], cr_rb_src[3]);
+
+                // 长指令l mul
+                int32x4_t cr_lt_dst = vmulq_s32(cr_lt_src, x0y0);
+                //printf("cr_lt_dst value %d %d %d %d \n", cr_lt_dst[0], cr_lt_dst[1], cr_lt_dst[2], cr_lt_dst[3]);
+                int32x4_t cr_lb_dst = vmulq_s32(cr_lb_src, x0y1);
+                int32x4_t cr_rt_dst = vmulq_s32(cr_rt_src, x1y0);
+                int32x4_t cr_rb_dst = vmulq_s32(cr_rb_src, x1y1);
+
+                int32x4_t cr_final_dst = vaddq_s32(cr_lt_dst, cr_lb_dst);
+                cr_final_dst = vaddq_s32(cr_final_dst, cr_rt_dst);
+                cr_final_dst = vaddq_s32(cr_final_dst, cr_rb_dst);
+                //printf("final value %d %d %d %d \n", cr_final_dst[0], cr_final_dst[1], cr_final_dst[2], cr_final_dst[3]);
+                int32x4_t cr_dst_s32 = vshrq_n_s32(cr_final_dst, 22);
+                if (i == 0) {
+                    cr_dst_s16_0 = vmovn_s32(cr_dst_s32);
+                } else if (i == 1) {
+                    cr_dst_s16_1 = vmovn_s32(cr_dst_s32);
+                }
+            }
+
+            uint8x8_t cb_dout = vqmovun_s16(vcombine_s16(cb_dst_s16_0, cb_dst_s16_1));
+            uint8x8_t cg_dout = vqmovun_s16(vcombine_s16(cg_dst_s16_0, cg_dst_s16_1));
+            uint8x8_t cr_dout = vqmovun_s16(vcombine_s16(cr_dst_s16_0, cr_dst_s16_1));
+
+            // todo vst3q_u8 继续并行 每次设置16个元素
+            uint8x8x3_t bgr_dst;
+            bgr_dst.val[0] = cb_dout;
+            bgr_dst.val[1] = cg_dout;
+            bgr_dst.val[2] = cr_dout;
+            vst3_u8(dst + dst_data_ofs, bgr_dst);
+        }
+    }
+
+    //delete[] buf;
+    //delete[] rowsbuf0;
+    //delete[] rowsbuf1;
+    printf("~~~~~~~~~~~~~~~~~~~remap neon finished!!!!!!!!!!!!\n\n");
+}
+
+}
+
+//#endif

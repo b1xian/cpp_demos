@@ -1,0 +1,7 @@
+@PACKAGE_INIT@
+
+set_and_check(SDKCondLaneNet_INCLUDE_DIRS "@PACKAGE_SDKCondLaneNet_INCLUDE_DIRS@")
+set_and_check(SDKCondLaneNet_LIBRARY_DIRS "@PACKAGE_SDKCondLaneNet_LIBRARY_DIRS@")
+set_and_check(SDKCondLaneNet_INSTALL_PATH "@PACKAGE_SDKCondLaneNet_INSTALL_PATH@")
+
+set(SDKCondLaneNet_LIBRARIES  SDKCondLaneNet)

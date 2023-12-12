@@ -1,0 +1,9 @@
+ENGINE_PATH       = "../model/visdeta5r3d_v0.5.1.engine"
+ImgH              = 512
+ImgW              = 512
+BatchSize         = 1
+NMS_THRESH        = 0.5
+CONF_THRESH       = 0.5
+OriH              = 720
+OriW              = 1280
+Undistort         = false

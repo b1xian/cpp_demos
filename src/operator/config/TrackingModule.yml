@@ -1,0 +1,7 @@
+# 相机的尺度，ipm后bev的尺度，以及内参和畸变参数相关配置文件
+camera_config_name       : CameraConfig.yml
+# 与ipm变换相关的外参相关配置文件
+ipm_config_name          : IpmConfig.txt
+
+# 距离获取相关的外参相关配置文件
+distance_estimator_name  : DistanceEstimator.yml

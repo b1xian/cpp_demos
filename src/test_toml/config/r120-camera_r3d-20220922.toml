@@ -1,0 +1,29 @@
+# front resolution
+src_width = 1280
+src_height = 720
+
+use_precomputed_H = true
+
+#######################J7 3670 r120 intrinsic#########################
+camera_matrix = [632.275, 0.000000, 634.117,
+    0.000000, 646.573, 372.619,
+    0.000000, 0.000000, 1.000000]
+
+distortion_coefficient = [-0.304436,
+                          0.091689,
+                          0.000733592,
+                          -0.00271045,
+                          -0.0135173]
+
+fov.h = 65.2  # [unit: degree]
+fov.v = 31.6  # [unit: degree]
+#######################J7 3670 r120 intrinsic#########################
+
+#######################J7 3670 r120 extrinsic#########################
+camera_pos.x = 4.77  # world-x [unit: m]5.347
+camera_pos.y = -1.50  # world-y [unit: m]
+camera_pos.z = 2.25 # world-z [unit: m]
+camera_rotate.rol = -106.0   # x rotate
+camera_rotate.pitch = -1.0  # y rotate
+camera_rotate.yaw = 180.0   # z rotate
+#######################J7 3670 r120 extrinsic#########################
