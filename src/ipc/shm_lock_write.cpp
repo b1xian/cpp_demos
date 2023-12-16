@@ -92,7 +92,7 @@ int main() {
         printf("Writing %d time cost : %f ms\n", i, time_cost);
 
         // 休眠，模拟写操作的时间间隔
-        std::this_thread::sleep_for(std::chrono::milliseconds(500));
+        std::this_thread::sleep_for(std::chrono::milliseconds(50));
         //usleep(500000);  // 500ms
         i++;
     }
