@@ -12,7 +12,7 @@ set(GTEST_LINK_DIR ${GTEST_DIR}/lib/linux-x86_64)
 message("-- [Dependency] gtest lib_dir = ${GTEST_LINK_DIR}")
 set(GTEST_LIB gtest)
 
-find_package(OpenCV)
+find_package(OpenCV 3)
 include_directories(
         ${OpenCV_INCLUDE_DIRS}
 )
