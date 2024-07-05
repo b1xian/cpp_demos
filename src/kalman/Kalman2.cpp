@@ -2,6 +2,7 @@
 #include <opencv2/core/core.hpp>
 #include <opencv2/opencv.hpp>
 #include <iostream>
+#include <Eigen/Dense>
 
 using namespace cv;
 using namespace std;
@@ -38,81 +39,113 @@ float Rect2DIou(const cv::Rect_<float>& rect1, const cv::Rect_<float>& rect2) {
 }
 
 int main() {
-    float A[10][2] = {
-            10, 30.4,
-            11, 31.3,
-            12, 32.3,
-            13, 33.2,
-            14, 34.3,
-            15, 35.6,
-            16, 36.5,
-            17, 37.6,
-            18, 38.4,
-            19, 39.3,
+    float A[30][2] = {
+            {1, 30.4},
+            {1, 31.3},
+            {1, 32.3},
+            {1, 33.2},
+            {1, 34.3},
+            {1, 35.5},
+            {1, 36.5},
+            {1, 37.6},
+            {1, 38.4},
+            {1, 39.3},
+            {1, 40.5},
+            {1, 41.7},
+            {1, 42.9},
+            {1, 44.2},
+            {1, 45.6},
+            {1, 47.0},
+            {1, 48.8},
+            {1, 50.8},
+            {1, 54.0},
+            {1, 56.5},
+            {1, 54.0},
     };
 
-    const int stateNum=4;
+    const int stateNum=6;
     // 观测量，移动距离
     const int measureNum=2;
 
-    KalmanFilter KF(stateNum, measureNum, 0);
-    KF.transitionMatrix = (cv::Mat_<float>(4, 4) <<
-                                                 1, 0, 1, 0,
-                                                 0, 1, 0, 1,
-                                                 0, 0, 1, 0,
-                                                 0, 0, 0, 1);
+    double dt = 0.1;
+    double a = 0.5 * dt * dt;
+//    A = np.array([[1,0,t,0,0.5*t*t,0],
+//                  [0,1,0,t,0,0.5*t*t],
+//                  [0,0,1,0,t,0],
+//                  [0,0,0,1,0,t],
+//                  [0,0,0,0,1,0],
+//                  [0,0,0,0,0,1]])
+
+  KalmanFilter KF(stateNum, measureNum, 0);
+    KF.transitionMatrix = (cv::Mat_<float>(6, 6) <<
+                                                 1, 0, dt, 0, a, 0,
+                                                 0, 1, 0, dt, 0, a,
+                                                 0, 0, 1, 0, dt, 0,
+                                                 0, 0, 0, 1, 0,  dt,
+                                                 0, 0, 0, 0, 1,  0,
+                                                 0, 0, 0, 0, 0,  1);
     setIdentity(KF.measurementMatrix); // 测量矩阵H
     setIdentity(KF.processNoiseCov, Scalar::all(1e-1)); // 系统噪声方差矩阵Q
+    std::cout << KF.processNoiseCov << std::endl; // Q
     setIdentity(KF.measurementNoiseCov, Scalar::all(1e-1)); // 测量噪声方差矩阵R
+  std::cout << KF.measurementNoiseCov << std::endl; //R
     setIdentity(KF.errorCovPost, Scalar::all(1));
+  std::cout << KF.errorCovPost << std::endl; //P
     Mat measurement = Mat::zeros(measureNum, 1, CV_32F);
 
 
-    std::cout << KF.measurementNoiseCov << std::endl;
-    std::cout << KF.measurementMatrix << std::endl;
+//    std::cout << KF.measurementNoiseCov << std::endl;
+//    std::cout << KF.measurementMatrix << std::endl;
     // 初始状态值
     KF.statePost.at<float>(0, 0) = A[0][0];
     KF.statePost.at<float>(1, 0) = A[0][1];
-    cout << "init state0=" << A[0][0] << ", " << A[0][1] << endl;
+    KF.statePost.at<float>(2, 0) = 0.0;
+    KF.statePost.at<float>(3, 0) = 10.0;
+    cout << "init state0= " << A[0][0] << ", " << A[0][1] << endl;
 
     int i= 1;
-    for (i = 1; i < 9; i++) {
-      printf("~~~~~~~~~~~~~~~~round %d~~~~~~~~~~~~~~~~~\n", i);
+    for (; i < 20; i++) {
+        printf("~~~~~~~~~~~~~~~~round %d~~~~~~~~~~~~~~~~~\n", i);
         Mat prediction = KF.predict(); // 预测单位delta为1s
-        printf("pre %.2f, y:%.2f %.2f, %.2f\n", prediction.at<float>(0), prediction.at<float>(1)
-                , prediction.at<float>(2), prediction.at<float>(3));
-//        if (i == 1) {
-//          KF.statePost.at<float>(2, 0) = 1.0;
-//          KF.statePost.at<float>(3, 0) = 1.0;
-//        }
+        printf("pred %.2f,%.2f velo(%.2f,%.2f), acc(%.2f,%.2f)\n",
+               prediction.at<float>(0), prediction.at<float>(1),
+               prediction.at<float>(2), prediction.at<float>(3),
+                prediction.at<float>(4), prediction.at<float>(5));
         measurement.at<float>(0) = (float)A[i][0];
         measurement.at<float>(1) = (float)A[i][1];
         printf("mea %.2f, y:%.2f\n", measurement.at<float>(0), measurement.at<float>(1));
         KF.correct(measurement);
-        printf("cor %.2f, y:%.2f vx:%.2f vy:%.2f\n",
-                KF.statePost.at<float>(0), KF.statePost.at<float>(1),
-                KF.statePost.at<float>(2), KF.statePost.at<float>(3));
+        printf("corr %.2f,%.2f velo(%.2f,%.2f), acc(%.2f,%.2f)\n",
+             KF.statePost.at<float>(0), KF.statePost.at<float>(1),
+                KF.statePost.at<float>(2), KF.statePost.at<float>(3),
+                KF.statePost.at<float>(4), KF.statePost.at<float>(5));
     }
 
-    printf("~~~~~~~~~~~~~~~~round 9~~~~~~~~~~~~~~~~~%d\n", i);
-    // 预测小车运动0.5s的位置
-    KF.transitionMatrix = (cv::Mat_<float>(4, 4) <<
-                                                 1, 0, 0.5, 0,
-                                                 0, 1, 0,   0.5,
-                                                 0, 0, 1,   0,
-                                                 0, 0, 0,   1);
+  printf("~~~~~~~~~~~~~~~~round %d~~~~~~~~~~~~~~~~~\n", i);
+//    // 预测小车运动0.5s的位置
+  KF.transitionMatrix = (cv::Mat_<float>(6, 6) <<
+                                               1, 0, dt, 0, a, 0,
+                                                0, 1, 0, dt, 0, a,
+                                                0, 0, 1, 0, dt, 0,
+                                                0, 0, 0, 1, 0,  dt,
+                                                0, 0, 0, 0, 1,  0,
+                                                0, 0, 0, 0, 0,  1);
+
+  std::cout << KF.transitionMatrix << std::endl;
     Mat prediction = KF.predict();
-    printf("pre %.2f, y:%.2f\n", prediction.at<float>(0), prediction.at<float>(1));
+    printf("pred %.2f,%.2f velo(%.2f,%.2f), acc(%.2f,%.2f)\n",
+           prediction.at<float>(0), prediction.at<float>(1),
+           prediction.at<float>(2), prediction.at<float>(3),
+           prediction.at<float>(4), prediction.at<float>(5));
     measurement.at<float>(0) = (float)A[i][0];
     measurement.at<float>(1) = (float)A[i][1];
     printf("mea %.2f, y:%.2f\n", measurement.at<float>(0), measurement.at<float>(1));
     KF.correct(measurement);
-    printf("cor %.2f, y:%.2f vx:%.2f vy:%.2f\n",
+    printf("corr %.2f,%.2f velo(%.2f,%.2f), acc(%.2f,%.2f)\n",
            KF.statePost.at<float>(0), KF.statePost.at<float>(1),
-           KF.statePost.at<float>(2), KF.statePost.at<float>(3));
+           KF.statePost.at<float>(2), KF.statePost.at<float>(3),
+           KF.statePost.at<float>(4), KF.statePost.at<float>(5));
 
-//    printf("trans %.2f, y:%.2f\n", KF.transitionMatrix.at<float>(2), KF.transitionMatrix.at<float>(7));
-//    std::cout << KF.statePost << std::endl;
 
 
 //  -- 5, sim:0.10, bev:0.00 0.37, trk:0.10,
@@ -142,7 +175,6 @@ int main() {
 
 
 //  printf("IOU: %.3f %.3f\n", iou, b_iou);
-
 
 
   return 0;
