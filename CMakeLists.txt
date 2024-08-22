@@ -46,6 +46,8 @@ add_subdirectory(src/test-tkcv)
 add_subdirectory(src/ipc)
 add_subdirectory(src/2023_interview)
 add_subdirectory(src/test_opencv)
+add_subdirectory(src/test_friend)
+add_subdirectory(src/test_fix_center)
 
 #if (${IS_COMPRESSED_IMAGE_TYPE} MATCHES true)
 #    add_definitions(-DCOMPRESSED_IMAGE_TYPE)

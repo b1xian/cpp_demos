@@ -1,4 +1,4 @@
-project(test_friend)
+project(test_egine)
 
 set(CMAKE_BUILD_TYPE Release)
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g -Wall")
@@ -14,6 +14,8 @@ pkg_check_modules(Eigen3 REQUIRED eigen3)
 
 
 include_directories(
-        ${Eigen3_INCLUDE_DIRS})
+        ${Eigen3_INCLUDE_DIRS}
+        ${CMAKE_CURRENT_SOURCE_DIR}
+)
 
-add_executable(test_egine main.cpp)
+add_executable(test_friend main.cpp Target.cpp VeloManager.cpp)

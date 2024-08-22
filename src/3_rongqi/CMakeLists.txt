@@ -3,4 +3,5 @@ project(test_deque)
 
 message("~~~~~~~~~~~~~~~~~~~~")
 add_executable(test_deque deque_demo.cpp)
+add_executable(test_rtti Rtti.cpp)
 

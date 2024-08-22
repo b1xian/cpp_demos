@@ -74,6 +74,31 @@ Eigen::Quaterniond Radian2Quaternion(double roll, double pitch, double yaw,
   return quaternion;
 }
 
+Eigen::Matrix3d eulerToRotationMatrix(double roll, double pitch, double yaw,
+                                      RotationUnitType rot_unit) {
+  if (rot_unit == RotationUnitType::ANGLE) {
+    roll *= DEG_TO_ARC;
+    pitch *= DEG_TO_ARC;
+    yaw *= DEG_TO_ARC;
+  }
+
+  // 创建绕X轴的旋转矩阵
+  Eigen::Matrix3d R_x;
+  R_x = Eigen::AngleAxisd(roll, Eigen::Vector3d::UnitX());
+
+  // 创建绕Y轴的旋转矩阵
+  Eigen::Matrix3d R_y;
+  R_y = Eigen::AngleAxisd(pitch, Eigen::Vector3d::UnitY());
+
+  // 创建绕Z轴的旋转矩阵
+  Eigen::Matrix3d R_z;
+  R_z = Eigen::AngleAxisd(yaw, Eigen::Vector3d::UnitZ());
+
+  // 组合旋转矩阵，根据ZYX的旋转顺序
+  Eigen::Matrix3d R = R_z * R_y * R_x;
+
+  return R;
+}
 Eigen::Affine3d GetAffine(const Eigen::Quaterniond& orientation,
                                   const Eigen::Vector3d& xyz) {
   Eigen::Matrix4d centerm;
@@ -174,6 +199,7 @@ yaw = 8.016597
   printf("q: %f %f %f %f\n", q_w, q_x, q_y, q_z);
 
     Eigen::Quaterniond quaternion(q_w, q_x, q_y, q_z);
+
     Eigen::Vector3d eulerAngle = quaternion.matrix().eulerAngles(2, 1, 0);
     auto mat = quaternion.matrix();
 
@@ -479,6 +505,32 @@ yaw = 8.016597
 //  double z_arc2 = -1.4481;
 //  double heading_rad2 = -z_arc2 + M_PI / 2;
 //  printf("rfu_rot2:%f ego_rot2 = %f\n", z_arc2, heading_rad2);
+
+  yaw = 0.0638;
+  quaternion = Radian2Quaternion(0, 0, yaw, RotationUnitType::RADIAN);
+  printf("q: %f %f %f %f\n", quaternion.w(),
+         quaternion.x(),
+         quaternion.y(),
+         quaternion.z());
+
+  auto r = eulerToRotationMatrix(0, 0, yaw, RotationUnitType::RADIAN);
+  std::cout << r << std::endl;
+  std::cout << quaternion.toRotationMatrix() << std::endl;
+
+
+  Eigen::Vector3d xyz;
+  xyz << 1, 1, 1;
+  auto affine= GetAffine(quaternion, xyz);
+  std::cout << affine.translation() << std::endl;
+  std::cout << affine.rotation() << std::endl;
+
+
+  std::cout << "_______________________" << std::endl;
+  Eigen::Matrix3d mattix;
+  mattix << 1.,1.,1.,
+                                1.,1.,1.,
+                                1.,1.,1.;
+  std::cout << mattix << std::endl;
 
   return 0;
 }

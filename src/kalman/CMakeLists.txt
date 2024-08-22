@@ -30,3 +30,6 @@ target_link_libraries(test_kalman_rollback ${OpenCV_LIBRARIES})
 
 add_executable(test_kalman_ctra Kalman_CTRA.cpp)
 target_link_libraries(test_kalman_ctra ${OpenCV_LIBRARIES})
+
+add_executable(test_kalman_angle KalmanAngle.cpp)
+target_link_libraries(test_kalman_angle ${OpenCV_LIBRARIES})
