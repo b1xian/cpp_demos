@@ -19,3 +19,4 @@ include_directories(
 )
 
 add_executable(test_fix_center main.cpp)
+add_executable(test_fix_angle fix_angle.cpp)

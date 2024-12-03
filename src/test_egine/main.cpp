@@ -491,46 +491,42 @@ yaw = 8.016597
   printf("%f %f %f\n", x_arc, y_arc, z_arc);
   printf("rfu_rot:%f \n", x_arc);
 
-  sensor_orientation.w() = -0.7265552571486688;
-  sensor_orientation.x() = -0.00043218364380933624;
-  sensor_orientation.y() = 0.0009444788398534909;
-  sensor_orientation.z() = 0.6871072547183963;
-  eulerAngles = sensor_orientation.toRotationMatrix().eulerAngles(2, 1, 0);
+  sensor_orientation.w() = 0.6428235052927631;
+  sensor_orientation.x() = 0.6365682039102064;
+  sensor_orientation.y() = 0.2902881782925809;
+  sensor_orientation.z() = -0.3119160726176728;
+  eulerAngles = sensor_orientation.toRotationMatrix().eulerAngles(0, 1, 2);
   x_arc = eulerAngles[0]; // roll
   y_arc = eulerAngles[1]; // pitch
   z_arc = eulerAngles[2]; // yaw
-  printf("%f %f %f\n", x_arc, y_arc, z_arc);
-  printf("rfu_rot:%f \n", x_arc);
+  x_deg = x_arc * ARC_TO_DEG; // roll
+  y_deg = y_arc * ARC_TO_DEG; // pitch
+  z_deg = z_arc * ARC_TO_DEG; // yaw
+  printf("eulerAngles %f %f %f\n", x_deg, y_deg, z_deg);
+//  printf("rfu_rot:%f \n", x_arc);
 //
 //  double z_arc2 = -1.4481;
 //  double heading_rad2 = -z_arc2 + M_PI / 2;
 //  printf("rfu_rot2:%f ego_rot2 = %f\n", z_arc2, heading_rad2);
 
-  yaw = 0.0638;
-  quaternion = Radian2Quaternion(0, 0, yaw, RotationUnitType::RADIAN);
-  printf("q: %f %f %f %f\n", quaternion.w(),
+//  yaw = 0.0638;
+//  quaternion = Radian2Quaternion(0, 0, yaw, RotationUnitType::RADIAN);
+//
+//  auto r = eulerToRotationMatrix(0, 0, yaw, RotationUnitType::RADIAN);
+//  std::cout << r << std::endl;
+//  std::cout << quaternion.toRotationMatrix() << std::endl;
+
+
+
+  z_deg = -54.0;
+  quaternion =
+          Eigen::AngleAxisd(x_deg * DEG_TO_ARC,   Eigen::Vector3d::UnitX()) *
+          Eigen::AngleAxisd(y_deg * DEG_TO_ARC, Eigen::Vector3d::UnitY()) *
+          Eigen::AngleAxisd(z_deg * DEG_TO_ARC,  Eigen::Vector3d::UnitZ());
+
+  printf("q: \n%f,\n %f,\n %f,\n %f\n", quaternion.w(),
          quaternion.x(),
          quaternion.y(),
          quaternion.z());
-
-  auto r = eulerToRotationMatrix(0, 0, yaw, RotationUnitType::RADIAN);
-  std::cout << r << std::endl;
-  std::cout << quaternion.toRotationMatrix() << std::endl;
-
-
-  Eigen::Vector3d xyz;
-  xyz << 1, 1, 1;
-  auto affine= GetAffine(quaternion, xyz);
-  std::cout << affine.translation() << std::endl;
-  std::cout << affine.rotation() << std::endl;
-
-
-  std::cout << "_______________________" << std::endl;
-  Eigen::Matrix3d mattix;
-  mattix << 1.,1.,1.,
-                                1.,1.,1.,
-                                1.,1.,1.;
-  std::cout << mattix << std::endl;
-
   return 0;
 }

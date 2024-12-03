@@ -17,3 +17,4 @@ include_directories(
         ${Eigen3_INCLUDE_DIRS})
 
 add_executable(test_egine main.cpp)
+add_executable(test_transform test_transform.cpp)
