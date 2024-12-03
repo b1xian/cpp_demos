@@ -28,7 +28,7 @@ def normalize_angle(angle):
     return angle
 
 
-def generate_sim_traj():
+def generate_sim_traj_curve():
     # 生成螺旋部分
     spiral_cnt = 150
     theta = np.linspace(5.0, 3.5 * np.pi, spiral_cnt)  # 角度
@@ -68,9 +68,70 @@ def generate_sim_traj():
         # heading[idx] = vh
 
     sim_traj = np.column_stack((x_traj_noisy, y_traj_noisy, heading, vx, vy))
-    return sim_traj
+    return "curve", sim_traj
 
-def draw_sim_traj(sim_traj, ca_pred, ctra_pred):
+def generate_sim_traj_curve_cutin():
+    # 生成螺旋部分
+    spiral_cnt = 150
+    theta = np.linspace(5.0, 3.5 * np.pi, spiral_cnt)  # 角度
+    r = theta / 0.3  # 半径
+    y_spiral = -r * np.cos(theta) + 60
+    x_spiral = r * np.sin(theta)
+    y_spiral = y_spiral[-10:-1]
+    x_spiral = x_spiral[-10:-1]
+    # 生成直线部分
+    line_dis = 30
+    line_cnt = 15
+    y_line = np.linspace(y_spiral[-1], y_spiral[-1] - line_dis, line_cnt)
+    x_line = np.ones_like(y_line) * x_spiral[-1]
+    # 生成螺旋另一部分
+    y_spiral_2 = []
+    x_spiral_2 = []
+    y_start = y_spiral[0]
+    x_start = x_spiral[0]
+    for i, (x, y) in enumerate(zip(x_spiral, y_spiral)):
+        print(i, x, y)
+        y_spiral_2.append(y_start + y_start - y)
+        x_spiral_2.append(x_start + x_start - x)
+    y_spiral_2.reverse()
+    x_spiral_2.reverse()
+    print(y_spiral_2)
+    y_line_2 = np.linspace(y_spiral_2[0], y_spiral_2[0] + line_dis, line_cnt)
+    y_line_2 = y_line_2[::-1]
+
+    print(y_line_2)
+    x_line_2 = np.ones_like(y_line) * x_spiral_2[0]
+
+    # 合并螺旋和直线部分
+    y_traj = np.concatenate((y_line_2, y_spiral_2, y_spiral, y_line))
+    x_traj = np.concatenate((x_line_2, x_spiral_2, x_spiral, x_line))
+
+    # 添加高斯噪声
+    noise_scale = 0.0  # 调整噪声的尺度
+    y_traj_noisy = y_traj + np.random.normal(0, noise_scale, y_traj.shape)
+    x_traj_noisy = x_traj + np.random.normal(0, noise_scale, x_traj.shape)
+    # 翻转
+    y_traj_noisy = y_traj_noisy[::-1]
+    x_traj_noisy = x_traj_noisy[::-1]
+
+    # 计算每一步的方向向量
+    dx = np.gradient(x_traj_noisy)
+    dy = np.gradient(y_traj_noisy)
+    vx = dx / 0.1
+    vy = dy / 0.1
+    # 计算航向角
+    heading = np.arctan2(dy, dx)
+    # for idx, h in enumerate(heading):
+    #     vh = calc_velo_heading(dx[idx], dy[idx])
+    #     h = normalize_angle(h)
+    #     print("{}, x:{:.1f} y:{:.1f}, dx:{:.1f} dy:{:.1f}, heading:{:.3f}, {:.3f}".format(
+    #         idx, x_traj_noisy[idx], y_traj_noisy[idx], dx[idx], dy[idx], h, vh))
+    # heading[idx] = vh
+
+    sim_traj = np.column_stack((x_traj_noisy, y_traj_noisy, heading, vx, vy))
+    return "cutin", sim_traj
+
+def draw_sim_traj(sim_traj, ca_pred, ctra_pred, traj_name):
     # 绘制轨迹
     # print(sim_traj[0], sim_traj[1])
     # plt.quiver(sim_traj[:, 0], sim_traj[:, 1], np.cos(sim_traj[:, 2]), np.sin(sim_traj[:, 2]), color='r', label='Heading', scale=100)
@@ -86,7 +147,7 @@ def draw_sim_traj(sim_traj, ca_pred, ctra_pred):
     plt.legend()
     plt.grid(True)
     plt.axis('equal')
-    plt.savefig('./ctra_traj.jpg')
+    plt.savefig('./ctra_traj_' + traj_name + '.png')
     plt.show()
 
     ca_x = ca_pred[:, 0]
@@ -145,7 +206,7 @@ def draw_sim_traj(sim_traj, ca_pred, ctra_pred):
     ax.set_title('ax')
     ax.grid(True)
     ax.plot(steps, d_ax, 'r', label='det_ax')
-    # ax.plot(steps, ca_ax, 'g', label='ca_ax')
+    ax.plot(steps, ca_ax, 'g', label='ca_ax')
     ax.plot(steps, ctra_ax, 'b', label='ctra_ax')
 
     plt.legend(loc='best')
@@ -168,11 +229,11 @@ def draw_sim_traj(sim_traj, ca_pred, ctra_pred):
     ax.set_title('ay')
     ax.grid(True)
     ax.plot(steps, d_ay, 'r', label='det_ay')
-    # ax.plot(steps, ca_ay, 'g', label='ca_ay')
+    ax.plot(steps, ca_ay, 'g', label='ca_ay')
     ax.plot(steps, ctra_ay, 'b', label='ctra_ay')
 
     plt.axis('auto')
-    plt.savefig('./ctra_info.jpg')
+    plt.savefig('./ctra_info_' + traj_name + '.png')
     plt.show()
 
 
@@ -180,7 +241,7 @@ def create_ctra_filter():
     n = 6
     m = 3
     # x, y, yaw, velo, w, a
-    Q_diag = np.array([0.5, 0.5, 0.01, 1.0, 0.1, 0.1])  # Q矩阵的对角元素
+    Q_diag = np.array([1.5, 1.5, 0.01, 1.0, 0.1, 0.1])  # Q矩阵的对角元素
     Q = np.diag(Q_diag)  # 创建对角矩阵Q
     R_diag = np.array([2.0, 2.0, 0.1])  # R矩阵的对角元素
     R = np.diag(R_diag)  # 创建对角矩阵R
@@ -190,7 +251,7 @@ def create_ctra_filter():
 def create_ca_filter():
     n = 6
     m = 2
-    Q_diag = np.array([0.5, 0.5, 0.2, 0.2, 0.1, 0.1])  # Q矩阵的对角元素
+    Q_diag = np.array([0.1, 0.1, 0.1, 0.1, 0.05, 0.05])  # Q矩阵的对角元素
     Q = np.diag(Q_diag)  # 创建对角矩阵Q
     R_diag = np.array([1.0, 1.0])  # R矩阵的对角元素
     R = np.diag(R_diag)  # 创建对角矩阵R
@@ -270,7 +331,8 @@ def ctra_test():
 if __name__ == '__main__':
     plt.figure(figsize=(20, 20))
 
-    sim_traj = generate_sim_traj()
+    # traj_name, sim_traj = generate_sim_traj_curve()
+    traj_name, sim_traj = generate_sim_traj_curve_cutin()
 
     # 创建滤波器
     ctra_filter = create_ctra_filter()
@@ -286,4 +348,4 @@ if __name__ == '__main__':
     ctra_pred = ctra_test()
     print('ctra cost:{}'.format(time.time() - start))
 
-    draw_sim_traj(sim_traj, ca_pred, ctra_pred)
+    draw_sim_traj(sim_traj, ca_pred, ctra_pred, traj_name)
